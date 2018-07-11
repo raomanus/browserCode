@@ -55,21 +55,27 @@ function handle_request(request) {
     console.log("url: " + url)
 
     var page_req = {
-        host: 'www.google.com',
+        host: url,
         port: 80,
         method: 'GET'
     };
 
     var req = http.request(page_req, function (res) {
-        //console.log('STATUS: ' + res.statusCode);
-        //console.log('HEADERS: ' + JSON.stringify(res.headers));
+        console.log('STATUS: ' + res.statusCode);
+        console.log('HEADERS: ' + JSON.stringify(res.headers));
         res.setEncoding('utf8');
+        res.on('error', function (error) { 
+            // console.log(chunk)
+            console.log("Error: " + error)
+            
+        });
         res.on('data', function (chunk) { 
-            console.log(chunk)
+            // console.log(chunk)
+            console.log("inside callback")
             publisher.send([token, JSON.stringify(chunk)])                
         });
     });
-
+    
     req.end()
 
 }
