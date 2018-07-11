@@ -57,7 +57,7 @@ function handle_request(request) {
     var page_req = {
         host: 'www.google.com',
         port: 80,
-        method: 'POST'
+        method: 'GET'
     };
 
     var req = http.request(page_req, function (res) {
