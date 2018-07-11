@@ -1,15 +1,44 @@
 var zmq = require('zeromq');
 var publisher = zmq.socket('pub');
 var subscriber = zmq.socket('sub');
+var synchronizeSubscription = zmq.socket('req');
+var synchronizePublisher = zmq.socket("rep");
+
+var SUBSCRIBERS_EXPECTED = 1;
+
 var http = require('http');
 
+// Subscription Synchronization
+synchronizeSubscription.connect('tcp://localhost:5100')
+synchronizeSubscription.send('')
+
+// Publisher synchronization
+var subscriberCount = 0;
+synchronizePublisher.on('message', function (request) {
+    subscriberCount++;
+    synchronizePublisher.send('')
+    if (subscriberCount >= SUBSCRIBERS_EXPECTED){
+        console.log("Publisher Synched")
+    }
+})
+
+
+synchronizePublisher.bind('tcp://*:6100', function(err){
+    if(err)
+        console.log(err)
+    else
+        console.log('Listening on 6100…')
+})
+
+
 // Bind publisher to port
-publisher.bind('tcp://*:8689', function (err) {
+publisher.bind('tcp://*:6101', function (err) {
     if (err)
         console.log(err)
     else
-        console.log("Publishing on 8689...")
+        console.log("Publishing on 6101...")
 })
+
 
 // Function to handle requests
 function handle_request(request) {
@@ -20,10 +49,11 @@ function handle_request(request) {
 
     var request = JSON.parse(msg[1])
     var url = request.url
-    var token = request.token
+    var token = "gui_backend"
 
-    console.log(url)
-    
+    console.log("Token: " + token)
+    console.log("url: " + url)
+
     var page_req = {
         host: 'www.google.com',
         port: 80,
@@ -34,25 +64,31 @@ function handle_request(request) {
         //console.log('STATUS: ' + res.statusCode);
         //console.log('HEADERS: ' + JSON.stringify(res.headers));
         res.setEncoding('utf8');
-        res.on('data', function (chunk) {
-            publisher.send([token, chunk])
+        res.on('data', function (chunk) { 
+            console.log(chunk)
+            publisher.send([token, JSON.stringify(chunk)])                
         });
     });
 
     req.end()
-    
+
 }
 
 // Initializing and listening to port
 subscriber.on("message", handle_request)
-subscriber.connect("tcp://localhost:8688");
-subscriber.subscribe("http_req");
+subscriber.connect("tcp://localhost:5101");
+subscriber.subscribe("network_backend");
+
 
 
 // On terminate cleanup
 process.on('SIGINT', function () {
+    synchronizeSubscription.close()
+    console.log('closed sync Subscription ')
+    synchronizePublisher.close()
+    console.log('closed sync Publisher')
     subscriber.close()
-    console.log('\nClosed subscriber')
+    console.log('Closed subscriber')
     publisher.close()
-    console.log('\nClosed publisher')
+    console.log('Closed publisher')
 })
