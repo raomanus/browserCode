@@ -3,6 +3,7 @@ var publisher = zmq.socket('pub');
 var subscriber = zmq.socket('sub');
 var synchronizeSubscription = zmq.socket('req');
 var synchronizePublisher = zmq.socket("rep");
+var page_req = require('request')
 
 var SUBSCRIBERS_EXPECTED = 1;
 
@@ -54,29 +55,18 @@ function handle_request(request) {
     console.log("Token: " + token)
     console.log("url: " + url)
 
-    var page_req = {
-        host: url,
-        port: 80,
-        method: 'GET'
-    };
-
-    var req = http.request(page_req, function (res) {
-        console.log('STATUS: ' + res.statusCode);
-        console.log('HEADERS: ' + JSON.stringify(res.headers));
-        res.setEncoding('utf8');
-        res.on('error', function (error) { 
-            // console.log(chunk)
-            console.log("Error: " + error)
-            
-        });
-        res.on('data', function (chunk) { 
-            // console.log(chunk)
-            console.log("inside callback")
-            publisher.send([token, JSON.stringify(chunk)])                
-        });
+    page_request(url, function (error, response, body) {
+        if (error) {
+            console.log('error:', error);
+            publisher.send([token, error]);
+        } else if (response && response.statusCode == 200) {
+            console.log('response status', response.statusCode);
+            publisher.send([token, body]);
+        } else if (response) {
+            console.log('Reponse status not OK:', response.statusCode);
+            publisher.send([token, response.statusMessage]);
+        }
     });
-    
-    req.end()
 
 }
 
