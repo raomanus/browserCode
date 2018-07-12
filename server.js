@@ -55,7 +55,7 @@ function handle_request(request) {
     console.log("Token: " + token)
     console.log("url: " + url)
 
-    page_request(url, function (error, response, body) {
+    page_req(url, function (error, response, body) {
         if (error) {
             console.log('error:', error);
             publisher.send([token, error]);
